@@ -1,6 +1,4 @@
-# Day 1 Notes — How CKB Works
-
-**Date:** Monday, 18 May 2026  
+# How CKB Works
 **Focus:** Understanding the CKB mental model: Cells, Scripts, Transactions, CKB-VM, verification, witnesses, and privacy implications.
 
 ---
