@@ -2,8 +2,6 @@
 
 A 3-month technical dev log for learning the Nervos CKB ecosystem from first principles.
 
-This repository tracks weekly reports, daily notes, screenshots, experiments, and practical outputs from the CKBuilder track. The focus is technical understanding, reflective learning, and proof of work toward becoming stronger in ZK, cryptography, and protocol engineering.
-
 ## Learning Goals
 
 - Understand CKB's mental model from the official Nervos documentation.
@@ -15,9 +13,7 @@ This repository tracks weekly reports, daily notes, screenshots, experiments, an
 
 ## Weekly Reporting Cadence
 
-- One weekly report is submitted every Saturday.
-- The first weekly report is due on Saturday, 23 May 2026.
-- Reports should be technical, reflective, and proof-of-work focused.
+- One weekly report is submitted every Sunday.
 
 ## Folder Structure
 
