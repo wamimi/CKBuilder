@@ -1,0 +1,22 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "cell": {
+      "data": {
+        "content": "0x63617073756c652d76303a207a6b2d6174746573746174696f6e2d706c616365686f6c646572",
+        "hash": "0x492c2b8a71d82ddff30aaaf59a5ff685266cce7307aec836027ec47bf23abac4"
+      },
+      "output": {
+        "capacity": "0x24e160300",
+        "lock": {
+          "args": "0x8e42b1999f265a0078503c4acec4d5e134534297",
+          "code_hash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+          "hash_type": "type"
+        },
+        "type": null
+      }
+    },
+    "status": "live"
+  },
+  "id": 42
+}
