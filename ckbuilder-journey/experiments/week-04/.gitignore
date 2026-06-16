@@ -1,0 +1,12 @@
+# Local reference clone used during Week 4. Do not commit the full docs repo here.
+docs.nervos.org/
+
+# Frontend generated files.
+capsule-notes/node_modules/
+capsule-notes/.parcel-cache/
+capsule-notes/dist/
+
+# Rust build artifacts.
+template-retry/**/target/
+template-retry/**/build/
+template-retry/**/tests/failed_txs/
