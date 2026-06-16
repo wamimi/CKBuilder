@@ -1,0 +1,12 @@
+{
+  "cell_recipes": [
+    {
+      "name": "hello-world",
+      "tx_hash": "0xbd3828eafa500d4fb42485bfb59214bb8abfe143c9c5c5b00a2323ff1b8d27aa",
+      "index": 0,
+      "occupied_capacity": 2179200000000,
+      "data_hash": "0x7828cf74ce5fe28177076041a86db8b4d6d8bd38ec19bf1ca3287c8ab285382d"
+    }
+  ],
+  "dep_group_recipes": []
+}
