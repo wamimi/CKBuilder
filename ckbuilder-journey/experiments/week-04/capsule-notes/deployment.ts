@@ -1,0 +1,15 @@
+export const CAPSULE_TRANSITION_GUARD = {
+    codeHash:
+      "0xdc518bd84b206230910343addafd49fd718a99d6b9b56f53ca112d37560f3734",
+    hashType: "data2",
+    cellDeps: [
+      {
+        outPoint: {
+          txHash:
+            "0x11f20dc0cf0266bf9cdcaff7472a4c41101829d21281a9ce66fad1d02c8a39cd",
+          index: "0x0",
+        },
+        depType: "code",
+      },
+    ],
+  } as const;
