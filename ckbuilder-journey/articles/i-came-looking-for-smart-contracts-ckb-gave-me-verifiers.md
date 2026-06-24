@@ -1,36 +1,20 @@
-# I Came Looking for Smart Contracts. CKB Gave Me Verifiers.
+## Where Is the ABI? Also, Why Is My Cell Dead?
 
-I came to CKB with an Ethereum-shaped brain.
+A notes app should not send you into an identity crisis.
 
-Accounts. Balances. Contract storage. ABI. Events. `mint()`. `transfer()`. `approve()`. `connectWallet()`. The familiar furniture of EVM development.
+You type something. You click save. Somewhere, some database politely updates itself. If you come from Ethereum, maybe that database is contract storage. You deploy a contract, verify it, grab the ABI, connect it to a frontend with `ethers` or `wagmi`, call `saveNote()`, and move on with your life.
 
-So when I first opened the CKB docs, my brain did what it always does when it meets a new chain: it tried to translate everything back into Ethereum.
+CKB did not let me move on with my life.
 
-Where is the contract?
+I came in looking for the familiar object: the contract. The thing with an address, an ABI, callable functions, internal storage, and events my frontend could listen to. Instead, CKB kept pointing at a Cell. Then at a transaction. Then at an OutPoint. Then at a script that did not want to be called, only satisfied.
 
-Where is the storage?
+And then, to make things worse, it told me the old Cell was dead.
 
-Where do I call the function?
+Not updated. Not modified. Dead.
 
-Where does the state live?
+The new state lived somewhere else now, in a new Cell, created by a transaction that had to carry the right data, the right scripts, the right dependencies, and enough evidence for every node to say: yes, this transition is valid.
 
-CKB's answer was deeply inconvenient:
-
-The state is in the Cell.
-
-The Cell is consumed.
-
-The new state is created.
-
-The script does not own the state.
-
-The script verifies the transition.
-
-That was the first crack in my mental model.
-
-At first, I thought I was learning another smart contract platform.
-
-I was wrong. Ethereum trained me to think in contract calls. CKB trained me to think in verifiable state transitions. That shift is why CKB started feeling interesting to my ZK brain.
+This is the story of how CKB took my Ethereum-shaped brain, stole my ABI, killed my Cell, and somehow made me understand state transitions better than I did before.
 
 
 ## The Comfort of the Ethereum-shaped Brain
@@ -1090,3 +1074,4 @@ CKB taught me to prove the transition.
 - [Store Data on Cell tutorial](https://docs.nervos.org/docs/dapp/store-data-on-cell)
 - [CCC JavaScript/TypeScript SDK docs](https://docs.nervos.org/docs/sdk-and-devtool/ccc)
 - [Rust Script Quick Start](https://docs.nervos.org/docs/script/rust/rust-quick-start)
+- what is the best way to have this bitch. hfghd
