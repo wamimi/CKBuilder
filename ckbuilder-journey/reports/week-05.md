@@ -1,7 +1,7 @@
 # CKBuilder Weekly Report - Week 5
 
 **Name:** Nelly Njeri  
-**Week Ending:** 23 June 2026  
+**Week Ending:** 21 June 2026  
 
 ## 1. Weekly Focus
 
@@ -541,5 +541,4 @@ Sources I used or reviewed this week:
 
 - Noir Nargo Commands / ACIR compilation reference  
   https://noir-lang.org/docs/reference/nargo_commands
-
 
