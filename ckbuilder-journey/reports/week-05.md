@@ -5,8 +5,6 @@
 
 ## 1. Weekly Focus
 
-This week was about turning Capsule Notes from a working typed-Cell demo into a clearer protocol inspection tool.
-
 In Week 4, I wrote, compiled, deployed, and interacted with a custom Rust Type Script called `capsule-transition-guard`. The main result was Capsule Notes: a small CKB dApp that mints a note as a typed Cell.
 
 For Week 5, I wanted to make the transaction shape visible.
@@ -305,9 +303,7 @@ live Cells
 
 That means a serious CKB frontend should help the developer see the transaction being proposed.
 
-This is why the Capsule Transaction Inspector is not just a UI addition. It is a small debugging tool for the Cell model.
-
-It shows the transition:
+That is why Capsule Transaction Inspector v0 is not just a UI addition. It is a small debugging surface for the Cell model. It shows the transition:
 
 ```txt
 old live Cells
@@ -324,33 +320,13 @@ That is also why this connects to the larger idea of a Cell Transaction Visual D
 
 This week I also worked on and published a CKBuilder reflection article.
 
+Article link:
+
+https://github.com/wamimi/CKBuilder/blob/main/ckbuilder-journey/articles/i-came-looking-for-smart-contracts-ckb-gave-me-verifiers.md
+
 The article grew out of my first four weeks learning CKB as someone coming from an Ethereum mental model.
 
-My original instinct was to look for:
-
-```txt
-contract address
-ABI
-verified source
-frontend client
-function calls
-```
-
-But CKB kept pushing me toward different questions:
-
-```txt
-Where is the state?
-Which Cell contains it?
-Which script controls ownership?
-Which script validates the transition?
-What witness evidence is supplied?
-Which CellDeps are needed?
-What exactly is being consumed and recreated?
-```
-
-The article explores that mental shift.
-
-It also connects to my ZK interests. The more I worked with Cells, witnesses, Type Scripts, and transaction validation, the more familiar the verifier shape became:
+The article also connects this CKB learning path to my ZK interests. The more I worked with Cells, witnesses, Type Scripts, and transaction validation, the more familiar the verifier shape became:
 
 ```txt
 old state
@@ -363,7 +339,6 @@ accept / reject
 
 CKB scripts are not automatically ZK verifiers, but CKB's model naturally trains the same kind of thinking: state transitions should be explicit, constrained, and verified.
 
-That was the main emotional and technical point of the article.
 
 
 ## 8. Molecule Research
@@ -379,7 +354,7 @@ The current Capsule layout is:
 [46..]    note body bytes
 ```
 
-This was useful for learning because I had to manually understand every byte. But it is not the best long-term format for a serious CKB application.
+This was useful for learning because I had to manually understand every byte. But it is not the best long-term format.
 
 CKB's documentation explains that CKB uses both JSON and Molecule. JSON is common for RPC, but Molecule is the core serialization method in CKB. Molecule is recommended because CKB needs serialization that is stable, consistent, efficient, and reliable across implementations.
 
@@ -508,12 +483,6 @@ This is still research, not implementation.
 
 The hard part is that a real verifier must become something CKB-VM can execute efficiently. CKB scripts are binary executables that run inside CKB-VM and return `0` for success or a non-zero code for failure.
 
-So the immediate goal is not:
-
-```txt
-build a full Noir-to-CKB compiler
-```
-
 The more realistic path is:
 
 ```txt
@@ -536,9 +505,9 @@ Capsule Notes
 ```
 
 
-## 10. Sources Studied
+## 10. Sources and References
 
-This week I used or reviewed:
+Sources I used or reviewed this week:
 
 - Nervos CKB: CCC documentation  
   https://docs.nervos.org/docs/sdk-and-devtool/ccc
@@ -574,82 +543,3 @@ This week I used or reviewed:
   https://noir-lang.org/docs/reference/nargo_commands
 
 
-## 11. Evidence and Artifacts
-
-Evidence from this week includes:
-
-```txt
-- Capsule Transaction Inspector v0 added to Capsule Notes
-- transaction snapshots before input selection
-- transaction snapshots after input and fee completion
-- account Lock Script displayed
-- Capsule Type Script displayed
-- Capsule CellDeps displayed
-- output data hex displayed
-- decoded Capsule data displayed
-- OutPoint shown after mint
-- live/dead Cell status shown
-- raw live Cell displayed
-- invalid Capsule mint rejected at Outputs[0].Type
-- custom script error code -42 captured
-- node debug output confirmed: Rejected: missing CAPSULE_V1 magic prefix
-- TypeScript check passing with tsc --noEmit
-- CKBuilder reflection article published
-- Molecule research notes started
-- Noir-to-CKB verifier research direction mapped
-```
-
-Suggested screenshots:
-
-```txt
-screenshots/week-05/01-capsule-notes-running.png
-screenshots/week-05/02-transaction-inspector-empty.png
-screenshots/week-05/03-valid-capsule-minted.png
-screenshots/week-05/04-before-funding-snapshot.png
-screenshots/week-05/05-after-funding-snapshot.png
-screenshots/week-05/06-capsule-type-script-and-celldep.png
-screenshots/week-05/07-outpoint-live-cell.png
-screenshots/week-05/08-raw-live-cell.png
-screenshots/week-05/09-invalid-capsule-browser-rejection.png
-screenshots/week-05/10-invalid-capsule-node-debug.png
-screenshots/week-05/11-invalid-inspector-failed-check.png
-screenshots/week-05/12-article-published.png
-screenshots/week-05/13-molecule-docs-research.png
-```
-
-
-## 12. Reflection
-
-This week made me more convinced that CKB development needs good visibility tools.
-
-The Cell model is powerful, but it is also easy to keep too much of it in your head. If the developer cannot see the transaction shape, debugging becomes much harder than it needs to be.
-
-Capsule Transaction Inspector v0 helped me see my own dApp more clearly.
-
-It also made the ZK direction feel more grounded.
-
-The shape I keep returning to is:
-
-```txt
-old state
-new state
-witness
-verifier
-accept / reject
-```
-
-That shape appears in CKB transactions, CKB scripts, and proof systems.
-
-The next step is to make the state format stronger with Molecule, then start moving toward proof-bound Cell transitions.
-
-My current path is:
-
-```txt
-Capsule Notes v1: custom binary typed Cell
-Capsule Inspector v0: transaction visibility
-Capsule Notes v2: Molecule serialization
-Capsule ProofEnvelope: proof metadata and public inputs
-Future work: Noir/CKB verifier research
-```
-
-This week was not just about adding an inspector. It was about learning to see CKB applications as explicit, inspectable, verifiable state transitions.
