@@ -27,9 +27,67 @@ export type MintCapsuleResult = {
   outPoint: CapsuleOutPoint;
   capsule: DecodedCapsule;
   rawOutputData: string;
+  inspector: CapsuleTransactionInspector;
 };
 
 export type CapsuleCellStatus = "live" | "dead-or-missing";
+
+export type CapsuleProtocolCheck = {
+  label: string;
+  ok: boolean;
+  expected?: string;
+  actual?: string;
+  detail?: string;
+};
+
+export type CapsuleCapacitySummary = {
+  inputShannons: string;
+  outputShannons: string;
+  feeShannons: string | null;
+  inputCKB: string;
+  outputCKB: string;
+  feeCKB: string | null;
+};
+
+export type CapsuleTransactionSnapshot = {
+  label: string;
+  hash: string;
+  inputsCount: number;
+  outputsCount: number;
+  outputsDataCount: number;
+  cellDepsCount: number;
+  headerDepsCount: number;
+  witnessesCount: number;
+  inputs: unknown[];
+  outputs: unknown[];
+  outputsData: string[];
+  cellDeps: unknown[];
+  headerDeps: unknown[];
+  witnesses: unknown[];
+  capacitySummary: CapsuleCapacitySummary;
+};
+
+export type CapsuleTransactionInspector = {
+  mode: "valid" | "invalid";
+  accountLockScript: Script;
+  capsuleTypeScript: Script;
+  cellDeps: ReturnType<typeof getCapsuleCellDeps>;
+  outputData: string;
+  outputDataBytes: number;
+  decodedCapsule: DecodedCapsule | null;
+  localRuleChecks: CapsuleProtocolCheck[];
+  beforeFunding: CapsuleTransactionSnapshot;
+  afterFunding: CapsuleTransactionSnapshot;
+  txHash?: string;
+  outPoint?: CapsuleOutPoint;
+  liveCellStatus?: CapsuleCellStatus | "unknown";
+  rawLiveCell?: unknown;
+  rejection?: string;
+};
+
+export type CapsuleMintError = Error & {
+  inspector?: CapsuleTransactionInspector;
+};
 
 const MAGIC = "CAPSULE_V1";
 const BAD_MAGIC = "BAD_MAGIC1";
@@ -61,6 +119,17 @@ export async function capacityOf(address: string): Promise<bigint> {
 
 export function shannonToCKB(amount: bigint) {
   return amount / 100000000n;
+}
+
+function shannonToCKBString(amount: bigint): string {
+  const whole = amount / 100000000n;
+  const fraction = amount % 100000000n;
+
+  if (fraction === 0n) {
+    return whole.toString();
+  }
+
+  return `${whole}.${fraction.toString().padStart(8, "0").replace(/0+$/, "")}`;
 }
 
 export async function wait(seconds: number) {
@@ -124,6 +193,103 @@ function randomCapsuleId(): Uint8Array {
   return id;
 }
 
+function outputDataByteLength(hex: string): number {
+  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+  return clean.length / 2;
+}
+
+function capacityToBigInt(value: unknown): bigint {
+  if (typeof value === "bigint") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return BigInt(value);
+  }
+
+  if (typeof value === "string" && value.length > 0) {
+    return BigInt(value);
+  }
+
+  return 0n;
+}
+
+function sumInputCapacity(inputs: unknown[]): bigint {
+  return inputs.reduce<bigint>((sum, input) => {
+    const candidate = input as {
+      cellOutput?: {
+        capacity?: unknown;
+      };
+    };
+
+    return sum + capacityToBigInt(candidate.cellOutput?.capacity);
+  }, 0n);
+}
+
+function sumOutputCapacity(outputs: unknown[]): bigint {
+  return outputs.reduce<bigint>((sum, output) => {
+    const candidate = output as {
+      capacity?: unknown;
+    };
+
+    return sum + capacityToBigInt(candidate.capacity);
+  }, 0n);
+}
+
+function snapshotTransaction(
+  label: string,
+  tx: ccc.Transaction
+): CapsuleTransactionSnapshot {
+  const txView = tx as unknown as {
+    hash: () => string;
+    inputs: unknown[];
+    outputs: unknown[];
+    outputsData: string[];
+    cellDeps: unknown[];
+    headerDeps: unknown[];
+    witnesses: unknown[];
+  };
+
+  const inputs = txView.inputs ?? [];
+  const outputs = txView.outputs ?? [];
+  const outputsData = txView.outputsData ?? [];
+  const cellDeps = txView.cellDeps ?? [];
+  const headerDeps = txView.headerDeps ?? [];
+  const witnesses = txView.witnesses ?? [];
+
+  const inputShannons = sumInputCapacity(inputs);
+  const outputShannons = sumOutputCapacity(outputs);
+  const feeShannons =
+    inputShannons > 0n && inputShannons >= outputShannons
+      ? inputShannons - outputShannons
+      : null;
+
+  return {
+    label,
+    hash: txView.hash(),
+    inputsCount: inputs.length,
+    outputsCount: outputs.length,
+    outputsDataCount: outputsData.length,
+    cellDepsCount: cellDeps.length,
+    headerDepsCount: headerDeps.length,
+    witnessesCount: witnesses.length,
+    inputs,
+    outputs,
+    outputsData,
+    cellDeps,
+    headerDeps,
+    witnesses,
+    capacitySummary: {
+      inputShannons: inputShannons.toString(),
+      outputShannons: outputShannons.toString(),
+      feeShannons: feeShannons?.toString() ?? null,
+      inputCKB: shannonToCKBString(inputShannons),
+      outputCKB: shannonToCKBString(outputShannons),
+      feeCKB: feeShannons == null ? null : shannonToCKBString(feeShannons),
+    },
+  };
+}
+
 export function getCapsuleTypeScript(): Script {
   return ccc.Script.from({
     codeHash: CAPSULE_TRANSITION_GUARD.codeHash,
@@ -169,7 +335,7 @@ export async function assertDeploymentCellIsLive(): Promise<void> {
 
   console.log("Deployment CellDep is live:", {
     outPoint: dep.outPoint,
-    dataHash: cell.data?.hash,
+    outputData: cell.outputData,
     expectedCodeHash: CAPSULE_TRANSITION_GUARD.codeHash,
   });
 }
@@ -234,6 +400,78 @@ export function decodeCapsuleData(hex: string): DecodedCapsule {
   };
 }
 
+export function inspectCapsuleData(hex: string): {
+  decodedCapsule: DecodedCapsule | null;
+  outputDataBytes: number;
+  checks: CapsuleProtocolCheck[];
+} {
+  const outputDataBytes = outputDataByteLength(hex);
+  const checks: CapsuleProtocolCheck[] = [
+    {
+      label: "Cell data is longer than the Capsule header",
+      ok: outputDataBytes > HEADER_LEN,
+      expected: `> ${HEADER_LEN} bytes`,
+      actual: `${outputDataBytes} bytes`,
+    },
+  ];
+
+  try {
+    const decodedCapsule = decodeCapsuleData(hex);
+    const bodyBytes = new TextEncoder().encode(decodedCapsule.body).length;
+
+    checks.push(
+      {
+        label: "Magic prefix is CAPSULE_V1",
+        ok: decodedCapsule.magic === MAGIC,
+        expected: MAGIC,
+        actual: decodedCapsule.magic,
+      },
+      {
+        label: "Version is 1",
+        ok: decodedCapsule.version === 1,
+        expected: "1",
+        actual: decodedCapsule.version.toString(),
+      },
+      {
+        label: "Capsule ID is 32 bytes",
+        ok: outputDataByteLength(decodedCapsule.capsuleId) === CAPSULE_ID_LEN,
+        expected: `${CAPSULE_ID_LEN} bytes`,
+        actual: `${outputDataByteLength(decodedCapsule.capsuleId)} bytes`,
+      },
+      {
+        label: "Body is non-empty",
+        ok: bodyBytes > 0,
+        expected: "> 0 bytes",
+        actual: `${bodyBytes} bytes`,
+      },
+      {
+        label: "Body fits the local 512-byte limit",
+        ok: bodyBytes <= MAX_BODY_BYTES,
+        expected: `<= ${MAX_BODY_BYTES} bytes`,
+        actual: `${bodyBytes} bytes`,
+      }
+    );
+
+    return {
+      decodedCapsule,
+      outputDataBytes,
+      checks,
+    };
+  } catch (err) {
+    checks.push({
+      label: "Cell data decodes as a Capsule",
+      ok: false,
+      detail: String(err),
+    });
+
+    return {
+      decodedCapsule: null,
+      outputDataBytes,
+      checks,
+    };
+  }
+}
+
 export async function mintCapsule(
   privateKey: string,
   body: string,
@@ -255,6 +493,8 @@ export async function mintCapsule(
     useBadMagic: options?.useBadMagic ?? false,
   });
 
+  const dataInspection = inspectCapsuleData(outputData);
+
   const tx = ccc.Transaction.from({
     cellDeps,
     outputs: [
@@ -266,6 +506,8 @@ export async function mintCapsule(
     outputsData: [outputData],
   });
 
+  const beforeFunding = snapshotTransaction("Before completeInputsByCapacity", tx);
+
   console.log("Capsule transaction before funding:", tx);
   console.log("Using Capsule Type Script:", capsuleType);
   console.log("Using Capsule CellDeps:", cellDeps);
@@ -274,9 +516,54 @@ export async function mintCapsule(
   await tx.completeInputsByCapacity(signer);
   await tx.completeFeeBy(signer, 1000);
 
+  const afterFunding = snapshotTransaction("After completeInputsByCapacity + completeFeeBy", tx);
+
   console.log("Capsule transaction after funding and fee:", tx);
 
-  const txHash = await signer.sendTransaction(tx);
+  const inspectorBase: CapsuleTransactionInspector = {
+    mode: options?.useBadMagic ? "invalid" : "valid",
+    accountLockScript: signerAddress.script,
+    capsuleTypeScript: capsuleType,
+    cellDeps,
+    outputData,
+    outputDataBytes: dataInspection.outputDataBytes,
+    decodedCapsule: dataInspection.decodedCapsule,
+    localRuleChecks: [
+      {
+        label: "Capsule output has a Type Script",
+        ok: Boolean((tx.outputs[0] as { type?: unknown }).type),
+      },
+      {
+        label: "Transaction includes the Capsule script CellDep",
+        ok:
+          cellDeps.length === 1 &&
+          cellDeps[0].outPoint.txHash ===
+            CAPSULE_TRANSITION_GUARD.cellDeps[0].outPoint.txHash &&
+          cellDeps[0].outPoint.index ===
+            CAPSULE_TRANSITION_GUARD.cellDeps[0].outPoint.index,
+        expected: `${CAPSULE_TRANSITION_GUARD.cellDeps[0].outPoint.txHash}:${CAPSULE_TRANSITION_GUARD.cellDeps[0].outPoint.index}`,
+        actual: `${cellDeps[0]?.outPoint.txHash}:${cellDeps[0]?.outPoint.index}`,
+      },
+      ...dataInspection.checks,
+    ],
+    beforeFunding,
+    afterFunding,
+    liveCellStatus: "unknown",
+  };
+
+  let txHash: string;
+
+  try {
+    txHash = await signer.sendTransaction(tx);
+  } catch (err) {
+    const failure = err instanceof Error ? err : new Error(String(err));
+    const mintError = failure as CapsuleMintError;
+    mintError.inspector = {
+      ...inspectorBase,
+      rejection: String(err),
+    };
+    throw mintError;
+  }
 
   console.log("Capsule mint transaction hash:", txHash);
 
@@ -286,8 +573,16 @@ export async function mintCapsule(
       txHash,
       index: "0x0",
     },
-    capsule: decodeCapsuleData(outputData),
+    capsule: dataInspection.decodedCapsule ?? decodeCapsuleData(outputData),
     rawOutputData: outputData,
+    inspector: {
+      ...inspectorBase,
+      txHash,
+      outPoint: {
+        txHash,
+        index: "0x0",
+      },
+    },
   };
 }
 

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { createRoot, Root } from "react-dom/client";
 import {
   CAPSULE_TRANSITION_GUARD,
+  CapsuleMintError,
+  CapsuleTransactionInspector,
   capacityOf,
   DecodedCapsule,
   generateAccountFromPrivateKey,
@@ -45,6 +47,216 @@ function safeJsonStringify(value: unknown): string {
   );
 }
 
+const sectionStyle: React.CSSProperties = {
+  border: "1px solid #d8dee4",
+  borderRadius: 8,
+  padding: 16,
+  margin: "16px 0",
+};
+
+const mutedStyle: React.CSSProperties = {
+  color: "#57606a",
+  fontSize: 14,
+};
+
+function JsonBlock({ value }: { value: unknown }) {
+  return (
+    <pre
+      style={{
+        background: "#f6f8fa",
+        border: "1px solid #d8dee4",
+        borderRadius: 6,
+        maxHeight: 320,
+        overflow: "auto",
+        padding: 12,
+        whiteSpace: "pre-wrap",
+      }}
+    >
+      {safeJsonStringify(value)}
+    </pre>
+  );
+}
+
+function ProtocolChecks({
+  inspector,
+}: {
+  inspector: CapsuleTransactionInspector;
+}) {
+  return (
+    <ul>
+      {inspector.localRuleChecks.map((check) => (
+        <li key={check.label}>
+          <strong>{check.ok ? "PASS" : "FAIL"}:</strong> {check.label}
+          {(check.expected || check.actual || check.detail) && (
+            <div style={mutedStyle}>
+              {check.expected && <span>Expected: {check.expected}. </span>}
+              {check.actual && <span>Actual: {check.actual}. </span>}
+              {check.detail && <span>{check.detail}</span>}
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SnapshotSummary({
+  snapshot,
+}: {
+  snapshot: CapsuleTransactionInspector["beforeFunding"];
+}) {
+  return (
+    <div style={sectionStyle}>
+      <h4>{snapshot.label}</h4>
+      <ul>
+        <li>
+          <strong>Transaction hash:</strong> {snapshot.hash}
+        </li>
+        <li>
+          <strong>Inputs:</strong> {snapshot.inputsCount}
+        </li>
+        <li>
+          <strong>Outputs:</strong> {snapshot.outputsCount}
+        </li>
+        <li>
+          <strong>Outputs data:</strong> {snapshot.outputsDataCount}
+        </li>
+        <li>
+          <strong>CellDeps:</strong> {snapshot.cellDepsCount}
+        </li>
+        <li>
+          <strong>Witnesses:</strong> {snapshot.witnessesCount}
+        </li>
+        <li>
+          <strong>Input capacity:</strong>{" "}
+          {snapshot.capacitySummary.inputCKB} CKB
+        </li>
+        <li>
+          <strong>Output capacity:</strong>{" "}
+          {snapshot.capacitySummary.outputCKB} CKB
+        </li>
+        <li>
+          <strong>Fee:</strong>{" "}
+          {snapshot.capacitySummary.feeCKB ?? "not known yet"} CKB
+        </li>
+      </ul>
+
+      <details>
+        <summary>Raw snapshot JSON</summary>
+        <JsonBlock value={snapshot} />
+      </details>
+    </div>
+  );
+}
+
+function TransactionInspector({
+  title,
+  inspector,
+}: {
+  title: string;
+  inspector: CapsuleTransactionInspector | null;
+}) {
+  if (!inspector) {
+    return (
+      <div style={sectionStyle}>
+        <h3>{title}</h3>
+        <p style={mutedStyle}>
+          No transaction has been inspected yet. Mint a valid Capsule or run the
+          invalid rejection test to populate this section.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={sectionStyle}>
+      <h3>{title}</h3>
+
+      <ul>
+        <li>
+          <strong>Mode:</strong> {inspector.mode}
+        </li>
+        <li>
+          <strong>Tx hash:</strong> {inspector.txHash ?? "not broadcast"}
+        </li>
+        <li>
+          <strong>OutPoint:</strong>{" "}
+          {inspector.outPoint
+            ? `${inspector.outPoint.txHash}:${inspector.outPoint.index}`
+            : "not created"}
+        </li>
+        <li>
+          <strong>Live Cell status:</strong>{" "}
+          {inspector.liveCellStatus ?? "unknown"}
+        </li>
+        <li>
+          <strong>Output data bytes:</strong> {inspector.outputDataBytes}
+        </li>
+      </ul>
+
+      {inspector.rejection && (
+        <>
+          <h4>Rejection</h4>
+          <pre style={{ whiteSpace: "pre-wrap", color: "crimson" }}>
+            {inspector.rejection}
+          </pre>
+        </>
+      )}
+
+      <h4>Local Protocol Checks</h4>
+      <ProtocolChecks inspector={inspector} />
+
+      <h4>Cell Flow</h4>
+      <pre style={{ whiteSpace: "pre-wrap" }}>
+        {[
+          "Input Cells",
+          "  funding Cells selected by CCC",
+          "        |",
+          "        v",
+          "Output Cells",
+          "  [0] Capsule Cell: lock = account lock, type = capsule-transition-guard",
+          "  [1] Change Cell: lock = account lock, type = null",
+        ].join("\n")}
+      </pre>
+
+      <SnapshotSummary snapshot={inspector.beforeFunding} />
+      <SnapshotSummary snapshot={inspector.afterFunding} />
+
+      <details>
+        <summary>Account Lock Script</summary>
+        <JsonBlock value={inspector.accountLockScript} />
+      </details>
+
+      <details>
+        <summary>Capsule Type Script</summary>
+        <JsonBlock value={inspector.capsuleTypeScript} />
+      </details>
+
+      <details>
+        <summary>CellDeps</summary>
+        <JsonBlock value={inspector.cellDeps} />
+      </details>
+
+      <details>
+        <summary>Output data hex</summary>
+        <JsonBlock value={inspector.outputData} />
+      </details>
+
+      <details>
+        <summary>Decoded Capsule data</summary>
+        <JsonBlock value={inspector.decodedCapsule} />
+      </details>
+
+      {inspector.rawLiveCell && (
+        <details open>
+          <summary>Raw live Cell from OutPoint lookup</summary>
+          <JsonBlock value={inspector.rawLiveCell} />
+        </details>
+      )}
+    </div>
+  );
+}
+
 export function App() {
   const [privKey, setPrivKey] = useState(
     "0x6109170b275a09ad54877b82f7d9930f88cab5717d484fb4741ae9d1dd078cd6"
@@ -65,6 +277,11 @@ export function App() {
   const [status, setStatus] = useState<"live" | "dead-or-missing" | "unknown">(
     "unknown"
   );
+
+  const [inspector, setInspector] =
+    useState<CapsuleTransactionInspector | null>(null);
+  const [invalidInspector, setInvalidInspector] =
+    useState<CapsuleTransactionInspector | null>(null);
 
   const [rawCell, setRawCell] = useState<any>(null);
   const [isWorking, setIsWorking] = useState(false);
@@ -112,6 +329,15 @@ export function App() {
     const raw = await readRawCell(targetTxHash, targetIndex);
 
     setRawCell(raw);
+    setInspector((previous) =>
+      previous
+        ? {
+            ...previous,
+            liveCellStatus: raw ? "live" : "dead-or-missing",
+            rawLiveCell: raw,
+          }
+        : previous
+    );
 
     if (!raw) {
       setStatus("dead-or-missing");
@@ -139,6 +365,7 @@ export function App() {
     setCapsule(null);
     setStatus("unknown");
     setLastAction("Minting valid Capsule...");
+    setInspector(null);
 
     try {
       const result = await mintCapsule(privKey, body);
@@ -146,6 +373,7 @@ export function App() {
       setTxHash(result.txHash);
       setOutPointIndex(result.outPoint.index);
       setCapsule(result.capsule);
+      setInspector(result.inspector);
 
       setLastAction(
         `Valid Capsule transaction sent: ${result.txHash}. Waiting for Cell to become readable...`
@@ -195,6 +423,7 @@ export function App() {
     setLastAction(
       "Trying invalid Capsule mint. This should fail if the deployed Type Script is executing..."
     );
+    setInvalidInspector(null);
 
     try {
       const result = await mintCapsule(privKey, body, { useBadMagic: true });
@@ -207,6 +436,12 @@ export function App() {
       );
     } catch (err) {
       console.error(err);
+      const mintError = err as CapsuleMintError;
+
+      if (mintError.inspector) {
+        setInvalidInspector(mintError.inspector);
+      }
+
       setLastError(String(err));
       alert(
         "Good: invalid Capsule was rejected. This proves the deployed Type Script is being executed."
@@ -438,6 +673,27 @@ export function App() {
           </pre>
         </>
       )}
+
+      <hr />
+
+      <h2>Capsule Transaction Inspector v0</h2>
+
+      <p>
+        The inspector captures the real CCC transaction shape before and after
+        input selection and fee completion. It exposes the Lock Script, Type
+        Script, CellDeps, output data, decoded Capsule bytes, capacity flow,
+        OutPoint lookup, live/dead status, and the invalid-mint rejection path.
+      </p>
+
+      <TransactionInspector
+        title="Valid Capsule Transaction"
+        inspector={inspector}
+      />
+
+      <TransactionInspector
+        title="Invalid Capsule Rejection"
+        inspector={invalidInspector}
+      />
 
       <hr />
 
