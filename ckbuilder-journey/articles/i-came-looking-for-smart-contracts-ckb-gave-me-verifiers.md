@@ -1074,4 +1074,3 @@ CKB taught me to prove the transition.
 - [Store Data on Cell tutorial](https://docs.nervos.org/docs/dapp/store-data-on-cell)
 - [CCC JavaScript/TypeScript SDK docs](https://docs.nervos.org/docs/sdk-and-devtool/ccc)
 - [Rust Script Quick Start](https://docs.nervos.org/docs/script/rust/rust-quick-start)
-- what is the best way to have this bitch. hfghd
