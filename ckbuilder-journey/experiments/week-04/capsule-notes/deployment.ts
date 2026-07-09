@@ -1,12 +1,12 @@
 export const CAPSULE_TRANSITION_GUARD = {
     codeHash:
-      "0xdc518bd84b206230910343addafd49fd718a99d6b9b56f53ca112d37560f3734",
+      "0x36ac01f38d772d2f3d86f213a17062c89e549199b9781c164386eb6db3e21640",
     hashType: "data2",
     cellDeps: [
       {
         outPoint: {
           txHash:
-            "0x11f20dc0cf0266bf9cdcaff7472a4c41101829d21281a9ce66fad1d02c8a39cd",
+            "0x105dcbb06c86bdc7fecbd16b5bfd52469ff12bd7915b0e1b5434b944a48fa375",
           index: "0x0",
         },
         depType: "code",
