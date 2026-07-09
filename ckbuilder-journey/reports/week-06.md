@@ -670,22 +670,6 @@ source: Outputs[0].Type
 error code: -42
 ```
 
-Screenshots to include:
-
-```txt
-week6-01-molecule-schema.png
-week6-02-molecule-codec-demo-round-trip.png
-week6-03-generated-rust-reader.png
-week6-04-rust-build-success.png
-week6-05-strip-binary-size.png
-week6-06-offckb-deploy-success.png
-week6-07-molecule-preview-ui.png
-week6-08-valid-molecule-mint-txhash.png
-week6-09-read-by-outpoint-live-cell.png
-week6-10-raw-live-cell-new-codehash.png
-week6-11-invalid-mint-output-type-error-42.png
-```
-
 
 ## 14. Reflection
 
