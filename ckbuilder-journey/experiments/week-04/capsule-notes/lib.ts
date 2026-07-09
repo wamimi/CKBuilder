@@ -1,4 +1,8 @@
 import { ccc, Script } from "@ckb-ccc/core";
+import {
+  decodeCapsuleMolecule,
+  encodeCapsuleMolecule,
+} from "./capsule-molecule";
 import { cccClient } from "./ccc-client";
 import { CAPSULE_TRANSITION_GUARD } from "./deployment";
 
@@ -92,10 +96,7 @@ export type CapsuleMintError = Error & {
 const MAGIC = "CAPSULE_V1";
 const BAD_MAGIC = "BAD_MAGIC1";
 
-const MAGIC_LEN = 10;
-const VERSION_LEN = 4;
 const CAPSULE_ID_LEN = 32;
-const HEADER_LEN = MAGIC_LEN + VERSION_LEN + CAPSULE_ID_LEN;
 
 const MAX_BODY_BYTES = 512;
 
@@ -159,32 +160,6 @@ function hexToBytes(hex: string): Uint8Array {
   }
 
   return bytes;
-}
-
-function u32ToLeBytes(value: number): Uint8Array {
-  if (!Number.isInteger(value) || value < 0) {
-    throw new Error("Version must be a non-negative integer");
-  }
-
-  const bytes = new Uint8Array(4);
-  bytes[0] = value & 0xff;
-  bytes[1] = (value >> 8) & 0xff;
-  bytes[2] = (value >> 16) & 0xff;
-  bytes[3] = (value >> 24) & 0xff;
-  return bytes;
-}
-
-function leBytesToU32(bytes: Uint8Array): number {
-  if (bytes.length !== 4) {
-    throw new Error("Expected exactly 4 bytes for u32");
-  }
-
-  return (
-    bytes[0] |
-    (bytes[1] << 8) |
-    (bytes[2] << 16) |
-    (bytes[3] << 24)
-  );
 }
 
 function randomCapsuleId(): Uint8Array {
@@ -356,48 +331,22 @@ export function encodeCapsuleData(params: {
     throw new Error(`Capsule body must be <= ${MAX_BODY_BYTES} bytes`);
   }
 
-  const magic = params.useBadMagic ? BAD_MAGIC : MAGIC;
-  const magicBytes = new TextEncoder().encode(magic);
-
-  if (magicBytes.length !== MAGIC_LEN) {
-    throw new Error("Magic prefix must be exactly 10 bytes");
-  }
-
-  const versionBytes = u32ToLeBytes(params.version);
   const capsuleId = params.capsuleId ?? randomCapsuleId();
 
   if (capsuleId.length !== CAPSULE_ID_LEN) {
     throw new Error("Capsule ID must be exactly 32 bytes");
   }
 
-  const data = new Uint8Array(HEADER_LEN + bodyBytes.length);
-
-  data.set(magicBytes, 0);
-  data.set(versionBytes, MAGIC_LEN);
-  data.set(capsuleId, MAGIC_LEN + VERSION_LEN);
-  data.set(bodyBytes, HEADER_LEN);
-
-  return bytesToHex(data);
+  return encodeCapsuleMolecule({
+    magic: params.useBadMagic ? BAD_MAGIC : MAGIC,
+    version: params.version,
+    capsuleId: bytesToHex(capsuleId),
+    body: params.body,
+  });
 }
 
 export function decodeCapsuleData(hex: string): DecodedCapsule {
-  const data = hexToBytes(hex);
-
-  if (data.length <= HEADER_LEN) {
-    throw new Error("Capsule data too short");
-  }
-
-  const magic = new TextDecoder().decode(data.slice(0, MAGIC_LEN));
-  const version = leBytesToU32(data.slice(MAGIC_LEN, MAGIC_LEN + VERSION_LEN));
-  const capsuleId = bytesToHex(data.slice(MAGIC_LEN + VERSION_LEN, HEADER_LEN));
-  const body = new TextDecoder().decode(data.slice(HEADER_LEN));
-
-  return {
-    magic,
-    version,
-    capsuleId,
-    body,
-  };
+  return decodeCapsuleMolecule(hex);
 }
 
 export function inspectCapsuleData(hex: string): {
@@ -408,9 +357,9 @@ export function inspectCapsuleData(hex: string): {
   const outputDataBytes = outputDataByteLength(hex);
   const checks: CapsuleProtocolCheck[] = [
     {
-      label: "Cell data is longer than the Capsule header",
-      ok: outputDataBytes > HEADER_LEN,
-      expected: `> ${HEADER_LEN} bytes`,
+      label: "Cell data is long enough to contain a Molecule CapsuleNote table",
+      ok: outputDataBytes > 20,
+      expected: "> 20 bytes",
       actual: `${outputDataBytes} bytes`,
     },
   ];
