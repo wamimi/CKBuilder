@@ -1,0 +1,11 @@
+array Magic [byte; 10];
+array Uint32 [byte; 4];
+array Byte32 [byte; 32];
+vector Bytes <byte>;
+
+table CapsuleNote {
+    magic: Magic,
+    version: Uint32,
+    capsule_id: Byte32,
+    body: Bytes,
+}
