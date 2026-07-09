@@ -4,7 +4,13 @@
 #[cfg(any(feature = "library", test))]
 extern crate alloc;
 
-use ckb_std::{ckb_constants::Source, default_alloc, entry, high_level::load_cell_data};
+use ckb_std::{ckb_constants::Source, high_level::load_cell_data};
+use generated::capsule_note::CapsuleNoteReader;
+use molecule::prelude::Reader;
+
+mod generated {
+    pub mod capsule_note;
+}
 
 #[cfg(not(any(feature = "library", test)))]
 ckb_std::entry!(program_entry);
@@ -17,11 +23,6 @@ ckb_std::entry!(program_entry);
 // and the buddy-alloc alloc implementation.
 ckb_std::default_alloc!(16384, 1258306, 64);
 const MAGIC: &[u8; 10] = b"CAPSULE_V1";
-const MAGIC_LEN: usize = 10;
-const VERSION_LEN: usize = 4;
-const CAPSULE_ID_LEN: usize = 32;
-const HEADER_LEN: usize = MAGIC_LEN + VERSION_LEN + CAPSULE_ID_LEN;
-
 const MAX_DATA_LEN: usize = 1024; // will enforce a nicer UX limit in the frontend
 
 #[derive(Clone, Copy)]
@@ -138,29 +139,33 @@ fn validate_update(input_data: &[u8], output_data: &[u8]) -> i8 {
     0
 }
 
-fn parse_capsule(data: &[u8]) -> Result<CapsuleHeader, i8> {
+fn parse_capsule(data: &[u8]) -> Result<CapsuleHeader<'_>, i8> {
     if data.len() > MAX_DATA_LEN {
         ckb_std::debug!("Rejected: capsule data too large.");
         return Err(-40);
     }
 
-    if data.len() <= HEADER_LEN {
-        ckb_std::debug!("Rejected: capsule data too short or missing body.");
-        return Err(-41);
-    }
+    let capsule = match CapsuleNoteReader::from_slice(data) {
+        Ok(reader) => reader,
+        Err(_) => {
+            ckb_std::debug!("Rejected: invalid Molecule CapsuleNote encoding.");
+            return Err(-45);
+        }
+    };
 
-    if &data[0..MAGIC_LEN] != MAGIC {
+    let magic = capsule.magic();
+    if magic.as_slice() != MAGIC {
         ckb_std::debug!("Rejected: missing CAPSULE_V1 magic prefix.");
         return Err(-42);
     }
 
-    let version_offset = MAGIC_LEN;
-
+    let version_bytes = capsule.version();
+    let version_bytes = version_bytes.as_slice();
     let version = u32::from_le_bytes([
-        data[version_offset],
-        data[version_offset + 1],
-        data[version_offset + 2],
-        data[version_offset + 3],
+        version_bytes[0],
+        version_bytes[1],
+        version_bytes[2],
+        version_bytes[3],
     ]);
 
     if version == 0 {
@@ -168,11 +173,10 @@ fn parse_capsule(data: &[u8]) -> Result<CapsuleHeader, i8> {
         return Err(-43);
     }
 
-    let id_start = MAGIC_LEN + VERSION_LEN;
-    let id_end = id_start + CAPSULE_ID_LEN;
-    let capsule_id = &data[id_start..id_end];
-
-    let body = &data[HEADER_LEN..];
+    let capsule_id = capsule.capsule_id();
+    let capsule_id = capsule_id.as_slice();
+    let body = capsule.body();
+    let body = body.raw_data();
 
     if body.is_empty() {
         ckb_std::debug!("Rejected: capsule body cannot be empty.");
