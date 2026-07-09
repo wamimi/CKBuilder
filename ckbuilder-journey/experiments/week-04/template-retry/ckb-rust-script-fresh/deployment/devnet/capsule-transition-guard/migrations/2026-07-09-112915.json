@@ -1,0 +1,12 @@
+{
+  "cell_recipes": [
+    {
+      "name": "capsule-transition-guard",
+      "tx_hash": "0x105dcbb06c86bdc7fecbd16b5bfd52469ff12bd7915b0e1b5434b944a48fa375",
+      "index": 0,
+      "occupied_capacity": 3897600000000,
+      "data_hash": "0x36ac01f38d772d2f3d86f213a17062c89e549199b9781c164386eb6db3e21640"
+    }
+  ],
+  "dep_group_recipes": []
+}
