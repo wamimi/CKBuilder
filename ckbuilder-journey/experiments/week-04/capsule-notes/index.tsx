@@ -16,6 +16,10 @@ import {
   wait,
 } from "./lib";
 import { Script } from "@ckb-ccc/core";
+import {
+  decodeCapsuleMolecule,
+  encodeCapsuleMolecule,
+} from "./capsule-molecule";
 
 declare global {
   interface Window {
@@ -58,6 +62,9 @@ const mutedStyle: React.CSSProperties = {
   color: "#57606a",
   fontSize: 14,
 };
+
+const PREVIEW_CAPSULE_ID =
+  "0x2222222222222222222222222222222222222222222222222222222222222222";
 
 function JsonBlock({ value }: { value: unknown }) {
   return (
@@ -484,6 +491,28 @@ export function App() {
 
   const enabledRead = !isWorking && txHash.length > 0;
 
+  const moleculePreview = (() => {
+    try {
+      const encoded = encodeCapsuleMolecule({
+        version: 1,
+        capsuleId: PREVIEW_CAPSULE_ID,
+        body,
+      });
+
+      return {
+        encoded,
+        decoded: decodeCapsuleMolecule(encoded),
+        error: "",
+      };
+    } catch (err) {
+      return {
+        encoded: "",
+        decoded: null,
+        error: String(err),
+      };
+    }
+  })();
+
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto", fontFamily: "sans-serif" }}>
       <h1>Capsule Notes</h1>
@@ -573,6 +602,30 @@ export function App() {
           fail if the deployed Type Script is actually being executed.
         </small>
       </p>
+
+      <hr />
+
+      <h2>Molecule Preview</h2>
+
+      <p>
+        Week 6 Molecule path: the current Capsule body is encoded as a
+        Molecule <code>CapsuleNote</code> table using CCC, then checked by the
+        redeployed Rust Type Script with the generated Molecule reader.
+      </p>
+
+      {moleculePreview.error ? (
+        <pre style={{ whiteSpace: "pre-wrap", color: "crimson" }}>
+          {moleculePreview.error}
+        </pre>
+      ) : (
+        <>
+          <h3>Molecule outputData preview</h3>
+          <JsonBlock value={moleculePreview.encoded} />
+
+          <h3>Decoded Molecule CapsuleNote</h3>
+          <JsonBlock value={moleculePreview.decoded} />
+        </>
+      )}
 
       <hr />
 
