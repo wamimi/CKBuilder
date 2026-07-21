@@ -583,7 +583,7 @@ The initial Week 9 success criteria should remain narrow:
 
 Molecule encoding and CKB-VM ingestion should only begin after the same proof has passed both source-backend verification and typed arkworks host verification with identical public semantics.
 
-## 18. Reflection and Request for Feedback
+## 18. Reflection
 
 My biggest lesson this week is that interoperability cannot be measured only by whether each tool accepts the previous tool's file.
 
@@ -598,7 +598,7 @@ The public-first control was equally useful. It confirmed that the backend can p
 
 This week found a boundary that must be correct before CKB-VM verification can mean what the application thinks it means.
 
-## 21. Resources
+## 19. Resources
 
 - [noir-ckb-verifier](https://github.com/wamimi/noir-ckb-verifier)
 - [Noir-Groth16](https://github.com/jamesbachini/Noir-Groth16)
